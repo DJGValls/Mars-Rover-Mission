@@ -42,7 +42,7 @@ class RoverController extends Controller
         $y = (int)$request->input('y');
         $direction = Directions::from(strtoupper($request->input('direction')));
         $commands = strtoupper($request->input('commands'));
-        // tamanyo del planeta 200x200
+        // tamany del planeta 200x200
         $maxX = 200;
         $maxY = 200;
         // Definir obstaculos

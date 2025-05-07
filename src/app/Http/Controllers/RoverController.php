@@ -12,7 +12,52 @@ class RoverController extends Controller
      */
     public function index()
     {
-        return view('rover.main');
+        // Check if rover position exists in session
+        if (session()->has('rover_position')) {
+            $position = session('rover_position');
+            $x = $position['x'];
+            $y = $position['y'];
+            $direction = $position['direction'];
+            $obstacles = session('obstacles', []);
+        } else {
+            // Generate random initial position
+            $x = rand(0, 5);
+            $y = rand(0, 5);
+            $directions = ['N', 'E', 'S', 'W'];
+            $direction = $directions[array_rand($directions)];
+            // Generate random obstacles
+            $obstacles = [];
+            $numObstacles = rand(0, 3);
+            for ($i = 0; $i < $numObstacles; $i++) {
+                $obstacleX = rand(0, 5);
+                $obstacleY = rand(0, 5);
+                // Check rover position
+                if ($obstacleX !== $x || $obstacleY !== $y) {
+                    $obstacles[] = ['x' => $obstacleX, 'y' => $obstacleY];
+                }
+            }
+            // Store initial position and obstacles in session
+            session(['rover_position' => [
+                'x' => $x,
+                'y' => $y,
+                'direction' => $direction
+            ]]);
+            session(['obstacles' => $obstacles]);
+        }
+        return view('rover.main', [
+            'rover' => (object)[
+                'x' => $x,
+                'y' => $y,
+                'direction' => $direction
+            ],
+            'obstacles' => $obstacles
+        ]);
+    }
+
+    public function clearSession()
+    {
+        session()->forget(['rover_position', 'obstacles']);
+        return redirect()->route('rover.index');
     }
 
     /**
@@ -27,98 +72,103 @@ class RoverController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
+{
 
-        // Validar los datos de entrada
-        $request->validate([
-            'x' => 'required|integer|min:0|max:200',
-            'y' => 'required|integer|min:0|max:200',
-            'direction' => ['required', new \Illuminate\Validation\Rules\Enum(Directions::class)],
-            'commands' => 'required|regex:/^[fFlLrR]+$/',
-            'obstacles' => 'nullable|array',
-        ]);
-        // obtenemos las coordenadas del formulario
-        $x = (int)$request->input('x');
-        $y = (int)$request->input('y');
-        $direction = Directions::from(strtoupper($request->input('direction')));
-        $commands = strtoupper($request->input('commands'));
-        // tamany del planeta 200x200
-        $maxX = 200;
-        $maxY = 200;
-        // Definir obstaculos
-        $obstacles = $request->input('obstacles', []);
-
-        // verificar si hay obstaculos en la posicion
-        $hasObstacle = function($newX, $newY) use ($obstacles) {
-            foreach ($obstacles as $obstacle) {
-                if ($obstacle['x'] === $newX && $obstacle['y'] === $newY) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        // Definir las posibles direcciones y sus cambios
-        $directionsEnum = [
-            Directions::Nord,
-            Directions::East,
-            Directions::South,
-            Directions::West,
-        ];
-        // cambio de direccion
-        $rotate = function (Directions $currentDir, string $turn) use ($directionsEnum): Directions {
-            $index = array_search($currentDir, $directionsEnum);
-            if ($turn === 'L') {
-                $index = ($index - 1 + count($directionsEnum)) % count($directionsEnum);
-            } elseif ($turn === 'R') {
-                $index = ($index + 1) % count($directionsEnum);
-            }
-            return $directionsEnum[$index];
-        };
-        $obstacleEncountered = false;
-        // Procesar cada comando
-        for ($i = 0; $i < strlen($commands); $i++) {
-            $command = $commands[$i];
-
-            if ($command === 'F') {
-                // Calcular la nueva posicion
-                $newX = $x;
-                $newY = $y;
-                switch ($direction) {
-                    case Directions::Nord:
-                        $newY = $y + 1;
-                        break;
-                    case Directions::South:
-                        $newY = $y - 1;
-                        break;
-                    case Directions::East:
-                        $newX = $x + 1;
-                        break;
-                    case Directions::West:
-                        $newX = $x - 1;
-                        break;
-                }
-                // limite del planeta
-                if ($newX < 0 || $newX > $maxX || $newY < 0 || $newY > $maxY) {
-                    continue;
-                }
-                // checkear obstaculos
-                if ($hasObstacle($newX, $newY)) {
-                    $obstacleEncountered = true;
-                    break;
-                }
-
-                $x = $newX;
-                $y = $newY;
-            } elseif ($command === 'L' || $command === 'R') {
-                $direction = $rotate($direction, $command);
-            }
-        }
-        $finalPosition = sprintf('(%d, %d, %s)', $x, $y, $direction->value);
-        if ($obstacleEncountered) {
-            $finalPosition = 'O:' . $finalPosition;
-        }
-        return redirect()->back()->with('resultado', $finalPosition);
+    $position = session('rover_position');
+    if (!$position) {
+        return redirect()->route('rover.index');
     }
+
+
+    $x = $position['x'];
+    $y = $position['y'];
+    $direction = Directions::from($position['direction']);
+
+    // Get obstacles from session or set default
+    $obstacles = session('obstacles', []);
+
+    // Process commands
+    $commands = strtoupper($request->input('commands'));
+    $obstacleEncountered = false;
+
+    // Define possible directions in clockwise order
+    $directionsEnum = [
+        Directions::Nord,
+        Directions::East,
+        Directions::South,
+        Directions::West,
+    ];
+
+    // Rotation handler
+    $rotate = function (Directions $currentDir, string $turn) use ($directionsEnum): Directions {
+        $index = array_search($currentDir, $directionsEnum);
+        if ($turn === 'L') {
+            $index = ($index - 1 + count($directionsEnum)) % count($directionsEnum);
+        } elseif ($turn === 'R') {
+            $index = ($index + 1) % count($directionsEnum);
+        }
+        return $directionsEnum[$index];
+    };
+    // Check for obstacles in next position
+    $hasObstacle = function($newX, $newY) use ($obstacles) {
+        foreach ($obstacles as $obstacle) {
+            if ($obstacle['x'] === $newX && $obstacle['y'] === $newY) {
+                return true;
+            }
+        }
+        return false;
+    };
+    $tryMoveForward = function() use (&$x, &$y, $direction, $hasObstacle, &$obstacleEncountered) {
+        $newX = $x;
+        $newY = $y;
+        switch ($direction) {
+            case Directions::Nord:
+                $newY = min($y + 1, 4); // Limit to grid size (5x5)
+                break;
+                case Directions::South:
+                    $newY = max($y - 1, 0);
+                    break;
+                    case Directions::East:
+                        dd($newX, $newY, $direction);
+                $newX = min($x + 1, 4);
+                break;
+            case Directions::West:
+                $newX = max($x - 1, 0);
+                break;
+        }
+        // Check if new position has obstacle
+        if ($hasObstacle($newX, $newY)) {
+            $obstacleEncountered = true;
+            return;
+        }
+        // Update position if no obstacle
+        $x = $newX;
+        $y = $newY;
+    };
+    // Process each command
+    foreach (str_split($commands) as $command) {
+        if ($command === 'F') {
+            $tryMoveForward();
+        } elseif ($command === 'L' || $command === 'R') {
+            $direction = $rotate($direction, $command);
+        }
+    }
+    // Store final position in session
+    session(['rover_position' => [
+        'x' => $x,
+        'y' => $y,
+        'direction' => $direction->value
+    ]]);
+    return view('rover.main', [
+        'rover' => (object)[
+            'x' => $x,
+            'y' => $y,
+            'direction' => $direction->value
+        ],
+        'obstacles' => $obstacles,
+        'obstacleEncountered' => $obstacleEncountered
+    ]);
+}
 
     /**
      * Display the specified resource.

@@ -32,6 +32,14 @@
         left: 50%;
         transform: translate(-50%, -50%);
     }
+    .obstacle {
+        font-size: 24px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+    }
     .rover-n { transform: translate(-50%, -50%) rotate(0deg); }
     .rover-e { transform: translate(-50%, -50%) rotate(90deg); }
     .rover-s { transform: translate(-50%, -50%) rotate(180deg); }
@@ -41,7 +49,7 @@
 <div class="relative min-h-screen bg-black">
     <div class="container mx-auto h-screen flex items-center justify-center p-4">
         <div class="w-full max-w-6xl space-y-4">
-            <!-- Grid del planeta 200x200 -->
+            <!-- Grid del planeta 200x200 pixeles-->
             <div class="grid-container border border-gray-800 bg-black/50 backdrop-blur-sm rounded-lg overflow-hidden">
                 <table class="virtual-grid">
                     @for ($y = 4; $y >= 0; $y--)
@@ -50,9 +58,16 @@
                                 <td class="grid-cell" data-x="{{ $x }}" data-y="{{ $y }}">
                                     @if (isset($rover) && $rover->x === $x && $rover->y === $y)
                                         <div class="rover rover-{{ strtolower($rover->direction) }}">
-                                            🤖
+                                            🚗
                                         </div>
                                     @endif
+                                    @foreach ($obstacles as $obstacle)
+                                        @if ($obstacle['x'] === $x && $obstacle['y'] === $y)
+                                            <div class="obstacle">
+                                                🪨
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </td>
                             @endfor
                         </tr>
@@ -63,31 +78,21 @@
             <div class="w-full bg-gray-900/80 backdrop-blur-sm rounded-lg p-4">
                 <form action="{{ route('rover.store') }}" method="POST" class="flex gap-4 items-end">
                     @csrf
-                    <div class="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300">Posición X</label>
-                            <input type="number" name="x" min="0" max="200" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300">Posición Y</label>
-                            <input type="number" name="y" min="0" max="200" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300">Dirección</label>
-                            <select name="direction" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" required>
-                                <option value="N">Norte</option>
-                                <option value="E">Este</option>
-                                <option value="S">Sur</option>
-                                <option value="W">Oeste</option>
-                            </select>
-                        </div>
+                    <div class="flex-1 grid grid-cols-2 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-300">Comandos</label>
-                            <input type="text" name="commands" pattern="[FLRflr]+" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" placeholder="FFLR" required>
+                            <input type="text" name="commands" pattern="[FLRBflrbNSEWnsew]+" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" placeholder="FNFLRWRE" required>
                         </div>
                     </div>
                     <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
                         Mover Rover
+                    </button>
+                </form>
+                <form method="POST" action="{{ route('rover.clear-session') }}" class="mt-4">
+                    @csrf
+                    <button type="submit"
+                            class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Clear Rover Position
                     </button>
                 </form>
             </div>

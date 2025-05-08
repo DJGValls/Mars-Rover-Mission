@@ -1,0 +1,28 @@
+services:
+    laravel-app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: laravel-app
+        ports:
+            - "8000:8000"
+        volumes:
+            - ./src:/var/www/html
+        networks:
+            - laravel-network
+        depends_on:
+            - laravel-vite
+    laravel-vite:
+        build:
+            context: .
+            dockerfile: Dockerfile.vite
+        container_name: laravel-vite
+        ports:
+            - "5173:5173"
+        volumes:
+            - ./src:/var/www/html
+        networks:
+            - laravel-network
+networks:
+    laravel-network:
+        driver: bridge

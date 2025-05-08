@@ -58,7 +58,7 @@
                                 <td class="grid-cell" data-x="{{ $x }}" data-y="{{ $y }}">
                                     @if (isset($rover) && $rover->x === $x && $rover->y === $y)
                                         <div class="rover rover-{{ strtolower($rover->direction) }}">
-                                            🚗
+                                            🤖
                                         </div>
                                     @endif
                                     @foreach ($obstacles as $obstacle)
@@ -75,24 +75,31 @@
                 </table>
             </div>
             <!-- Formulario para controlar el rover -->
-            <div class="w-full bg-gray-900/80 backdrop-blur-sm rounded-lg p-4">
-                <form action="{{ route('rover.store') }}" method="POST" class="flex gap-4 items-end">
+            <div class="w-full max-w-[500px] mx-auto bg-gray-900/80 backdrop-blur-sm rounded-lg p-8">
+                <form action="{{ route('rover.store') }}" method="POST" class="flex flex-col gap-6">
                     @csrf
-                    <div class="flex-1 grid grid-cols-2 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300">Comandos</label>
-                            <input type="text" name="commands" pattern="[FLRBflrbNSEWnsew]+" class="mt-1 block w-full rounded-md border-gray-700 bg-gray-800 text-white" placeholder="FNFLRWRE" required>
-                        </div>
+                    <div class="flex flex-col gap-4">
+                        <label class="block text-lg font-medium text-white">Rover Commands</label>
+                        <input type="text"
+                               name="commands"
+                               pattern="[FLRBflrbNSEWnsew]+"
+                               class="w-full rounded-md border-gray-700 bg-gray-800 text-white px-4 py-3 text-lg focus:border-red-500 focus:ring-red-500"
+                               placeholder="Enter commands (e.g., FLRflr)"
+                               required>
+                        <p class="text-sm text-gray-400">Valid commands: F (Forward), L (Turn Left), R (Turn Right)</p>
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-                        Mover Rover
-                    </button>
+                    <div class="flex flex-col gap-4">
+                        <button type="submit"
+                                class="mission-button inline-block px-6 py-3 text-lg font-semibold text-white transition duration-300 ease-in-out transform hover:scale-105">
+                            Move Rover
+                        </button>
+                    </div>
                 </form>
                 <form method="POST" action="{{ route('rover.clear-session') }}" class="mt-4">
                     @csrf
                     <button type="submit"
-                            class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                        Clear Rover Position
+                            class="reset-mission-button w-full inline-block px-6 py-3 text-lg font-semibold text-white transition duration-300 ease-in-out transform hover:scale-105">
+                        Reset Mission
                     </button>
                 </form>
             </div>

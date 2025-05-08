@@ -47,6 +47,14 @@
                 transform: scale(1.1);
                 color: #00BFFF !important;
             }
+            .reset-mission-button {
+                transition: all 0.3s ease;
+                transform-origin: center;
+            }
+            .reset-mission-button:hover {
+                transform: scale(1.1);
+                color: #ff0026 !important;
+            }
             @keyframes twinkle {
                 from { opacity: 0.2; }
                 to { opacity: 1; }

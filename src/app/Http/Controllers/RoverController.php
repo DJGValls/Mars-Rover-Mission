@@ -12,43 +12,43 @@ class RoverController extends Controller
      */
     public function index()
     {
-        // Check if rover position exists in session
+        $position = null;
+        $obstacles = [];
         if (session()->has('rover_position')) {
             $position = session('rover_position');
-            $x = $position['x'];
-            $y = $position['y'];
-            $direction = $position['direction'];
             $obstacles = session('obstacles', []);
-        } else {
-            // Generate random initial position
-            $x = rand(0, 5);
-            $y = rand(0, 5);
+        }
+        if (!$position) {
+            // Generate random initial position if not exists
+            $x = rand(1, 4);
+            $y = rand(1, 4);
             $directions = ['N', 'E', 'S', 'W'];
             $direction = $directions[array_rand($directions)];
+
+            $position = [
+                'x' => $x,
+                'y' => $y,
+                'direction' => $direction
+            ];
             // Generate random obstacles
-            $obstacles = [];
-            $numObstacles = rand(0, 3);
+            $numObstacles = rand(0, 10);
             for ($i = 0; $i < $numObstacles; $i++) {
                 $obstacleX = rand(0, 5);
                 $obstacleY = rand(0, 5);
                 // Check rover position
-                if ($obstacleX !== $x || $obstacleY !== $y) {
+                if ($obstacleX !== $position['x'] || $obstacleY !== $position['y']) {
                     $obstacles[] = ['x' => $obstacleX, 'y' => $obstacleY];
                 }
             }
-            // Store initial position and obstacles in session
-            session(['rover_position' => [
-                'x' => $x,
-                'y' => $y,
-                'direction' => $direction
-            ]]);
+            // Store position and obstacles in session
+            session(['rover_position' => $position]);
             session(['obstacles' => $obstacles]);
         }
         return view('rover.main', [
             'rover' => (object)[
-                'x' => $x,
-                'y' => $y,
-                'direction' => $direction
+                'x' => $position['x'],
+                'y' => $position['y'],
+                'direction' => $position['direction']
             ],
             'obstacles' => $obstacles
         ]);
@@ -57,7 +57,7 @@ class RoverController extends Controller
     public function clearSession()
     {
         session()->forget(['rover_position', 'obstacles']);
-        return redirect()->route('rover.index');
+        return redirect()->route('rover.index')->with('status', 'Session cleared successfully');
     }
 
     /**
@@ -118,21 +118,20 @@ class RoverController extends Controller
         }
         return false;
     };
-    $tryMoveForward = function() use (&$x, &$y, $direction, $hasObstacle, &$obstacleEncountered) {
+    $tryMoveForward = function() use (&$x, &$y, &$direction, $hasObstacle, &$obstacleEncountered) {
         $newX = $x;
         $newY = $y;
-        switch ($direction) {
-            case Directions::Nord:
+        switch ($direction->value) {
+            case Directions::Nord->value:
                 $newY = min($y + 1, 4); // Limit to grid size (5x5)
                 break;
-                case Directions::South:
-                    $newY = max($y - 1, 0);
-                    break;
-                    case Directions::East:
-                        dd($newX, $newY, $direction);
+            case Directions::South->value:
+                $newY = max($y - 1, 0);
+                break;
+            case Directions::East->value:
                 $newX = min($x + 1, 4);
                 break;
-            case Directions::West:
+            case Directions::West->value:
                 $newX = max($x - 1, 0);
                 break;
         }
